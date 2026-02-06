@@ -29,7 +29,7 @@
                 </div>
 
                 <div class="card-actions">
-                    {% if r.is_active == 1 %}
+                    {% if r.get('is_active', 1) == 1 %}
                     <a href="/toggle/{{ r.order_id }}" class="toggle-btn off">
                         Turn OFF
                     </a>
