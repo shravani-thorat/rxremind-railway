@@ -1,62 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Reminders</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#2b7cff">
-
+  <meta charset="UTF-8">
+  <title>View Reminders</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
 
 <body>
 
-<div class="container">
-    <h2>📋 Active Reminders</h2>
+<header class="top-bar">
+  <h2>⏰ Reminders</h2>
+  <a href="/" class="back-btn">⬅ Back</a>
+</header>
 
-    {% if reminders %}
-        {% for r in reminders %}
-            <div class="card">
-                <div class="card-row">
-                    <strong>{{ r.name }}</strong>
-                </div>
+<div class="alarm-list">
 
-                <div class="card-row">
-                    💊 {{ r.medicine }}
-                </div>
+  {% for r in reminders %}
+  <div class="alarm-card">
 
-                <div class="card-row">
-                    Quantity: {{ r.quantity }}
-                </div>
+    <!-- LEFT INFO -->
+    <div class="alarm-info">
+      <div class="alarm-title">{{ r.medicine_name }}</div>
+      <div class="alarm-sub">{{ r.customer_name }} • {{ r.days }} days</div>
+      <div class="alarm-meta">
+        📞 {{ r.phone }} &nbsp;•&nbsp; ⏰ {{ r.reminder_date }}
+      </div>
+    </div>
 
-                <div class="card-actions">
-                    {% if r.get('is_active', 1) == 1 %}
-                    <a href="/toggle/{{ r.order_id }}" class="toggle-btn off">
-                        Turn OFF
-                    </a>
-                    {% else %}
-                    <a href="/toggle/{{ r.order_id }}" class="toggle-btn on">
-                        Turn ON
-                    </a>
-                    {% endif %}
-                </div>
+    <!-- RIGHT TOGGLE -->
+    <div class="alarm-toggle">
+      <label class="switch">
+        <input type="checkbox" {% if r.is_active %}checked{% endif %}>
+        <span class="slider"></span>
+      </label>
+    </div>
 
+  </div>
+  {% endfor %}
 
-            </div>
-        {% endfor %}
-    {% else %}
-        <p>No reminders available.</p>
-    {% endif %}
-
-    <br>
-    <a href="/">⬅ Back</a>
 </div>
-
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/static/sw.js")
-    .then(() => console.log("Service Worker registered"));
-}
-</script>
 
 </body>
 </html>

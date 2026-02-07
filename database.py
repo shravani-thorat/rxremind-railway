@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "pharmacy.db")
@@ -157,9 +157,19 @@ def get_reminders():
         order_id,name,phone,med,qty,days,is_active,reminder_date, last_reminded_on = row
 
         if last_reminded_on is None:
-            due_date = datetime.fromisoformat(reminder_date).date()  #check for remind date
-        else: #if not remind then check for last reminded 
-            due_date = datetime.fromisoformat(last_reminded_on).date() + timedelta(days = days)
+            if isinstance(reminder_date, str):
+                due_date = datetime.fromisoformat(reminder_date).date()
+            elif isinstance(reminder_date, date):
+                due_date = reminder_date
+            else:
+                continue   # skip broken record safely
+        else:
+            if isinstance(last_reminded_on, str):
+                due_date= datetime.fromisoformat(last_reminded_on).date() + timedelta(days=days)
+            elif isinstance(last_reminded_on, date):
+                due_date = last_reminded_on + timedelta(days=days)
+            else:
+                continue
 
         #checking for today's reminder
         if due_date == today:
@@ -249,7 +259,10 @@ def init_db():
     conn.close()
 
 # if __name__ == "__main__":
-#     print("Reminder logic updated successfully")
+#     update_medicine_orders_table()
+#     print("Updated successfully")
+
+
 
 
 
