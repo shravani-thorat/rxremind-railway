@@ -5,7 +5,6 @@
   <title>View Reminders</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 </head>
 
 <body>
@@ -17,30 +16,104 @@
 
 <div class="alarm-list">
 
-  {% for r in reminders %}
-  <div class="alarm-card">
+  {% if reminders %}
+    {% for r in reminders %}
+    <div class="alarm-card">
 
-    <!-- LEFT INFO -->
-    <div class="alarm-info">
-      <div class="alarm-title">{{ r.medicine_name }}</div>
-      <div class="alarm-sub">{{ r.customer_name }} • {{ r.days }} days</div>
-      <div class="alarm-meta">
-        📞 {{ r.phone }} &nbsp;•&nbsp; ⏰ {{ r.reminder_date }}
+      <div class="alarm-info">
+        <div class="alarm-title">{{ r.medicine }}</div>
+        <div class="alarm-sub">{{ r.name }}</div>
+        <div class="alarm-meta">
+          📞 {{ r.phone }} • ⏰ {{ r.reminder_date }}
+        </div>
       </div>
-    </div>
 
-    <!-- RIGHT TOGGLE -->
-    <div class="alarm-toggle">
-      <label class="switch">
-        <input type="checkbox" {% if r.is_active %}checked{% endif %}>
-        <span class="slider"></span>
-      </label>
-    </div>
+      <div class="alarm-actions">
 
-  </div>
-  {% endfor %}
+        <!-- Toggle -->
+        <label class="switch">
+          <input type="checkbox"
+                 {% if r.is_active %}checked{% endif %}
+                 onchange="toggleReminder('{{ r.order_id }}')"
+          <span class="slider"></span>
+        </label>
+
+        <!-- Delete -->
+        <button onclick="deleteReminder('{{ r.order_id }}')"
+                class="delete-btn">
+            🗑
+        </button>
+
+      </div>
+
+    </div>
+    {% endfor %}
+  {% else %}
+    <p style="text-align:center; padding:20px;">
+      No reminders yet.
+    </p>
+  {% endif %}
 
 </div>
+
+
+<script>
+
+function toggleReminder(orderId) {
+  fetch("/toggle/" + orderId)
+    .then(response => {
+      if (response.ok) {
+        location.reload();
+      }
+    });
+}
+
+function deleteReminder(orderId) {
+  if (confirm("Delete this reminder?")) {
+    fetch("/delete/" + orderId)
+      .then(response => {
+        if (response.ok) {
+          location.reload();
+        }
+      });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+  if (!("Notification" in window)) {
+    return;
+  }
+
+  if (Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
+
+  fetch("/api/reminders")
+    .then(res => res.json())
+    .then(data => {
+
+      data.forEach(reminder => {
+
+        if (reminder.should_notify === true) {
+
+          if (Notification.permission === "granted") {
+            new Notification("📢 Medicine Reminder", {
+              body: reminder.name + " needs " + reminder.medicine
+            });
+          }
+
+          // Mark as reminded (avoid repeat today)
+          fetch("/mark_reminded/" + reminder.order_id);
+
+        }
+
+      });
+
+    });
+
+});
+</script>
 
 </body>
 </html>

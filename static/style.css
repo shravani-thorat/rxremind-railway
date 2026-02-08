@@ -87,6 +87,11 @@ button:hover{
   box-shadow: 0 4px 8px rgba(0,0,0,0.06);
 }
 
+.alarm-toggle {
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+
 /* Left info */
 .alarm-info {
   flex: 1;
@@ -118,6 +123,8 @@ button:hover{
 
 .switch input {
   opacity: 0;
+  width: 0;
+  height: 0;
 }
 
 .slider {
