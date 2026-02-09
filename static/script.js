@@ -17,7 +17,6 @@ function addMedicine() {
     document.getElementById("medicines").appendChild(div);
 }
 
-// Firebase Config
 const firebaseConfig = {
     apiKey: "AIzaSyC5xLeT44La7Cfz5w2l5NgF5MWVzh_gtyY",
     authDomain: "rxremind-bb83e.firebaseapp.com",
@@ -26,13 +25,12 @@ const firebaseConfig = {
     appId: "1:1098454881651:web:fe4cf0689ab90bf10f6106"
 };
 
-// Register Service Worker + Get Token
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/firebase-messaging-sw.js")
         .then((registration) => {
-
-            const app = initializeApp(firebaseConfig);
-            const messaging = getMessaging(app);
 
             Notification.requestPermission().then((permission) => {
                 if (permission === "granted") {
@@ -50,9 +48,6 @@ if ("serviceWorker" in navigator) {
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ token: currentToken })
                             });
-
-                        } else {
-                            console.log("No token received.");
                         }
 
                     }).catch((err) => {
