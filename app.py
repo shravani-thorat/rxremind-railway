@@ -13,6 +13,8 @@ from firebase_push import send_push
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import sqlite3
+from database import DB_PATH
+
 
 app = Flask(__name__)
 app.secret_key = "rxremind-secret"
@@ -137,6 +139,17 @@ def firebase_messaging_sw():
 def manual_check():
     check_reminders_daily()
     return "Manual check done", 200
+
+@app.route("/check-tokens")
+def check_tokens():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT token FROM fcm_tokens")
+    tokens = cursor.fetchall()
+    conn.close()
+
+    return {"tokens": tokens}
+
 
 
 if __name__ == "__main__":
