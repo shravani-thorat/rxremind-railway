@@ -9,7 +9,7 @@ from database import (
     turn_off_reminder,
     delete_reminder
 )
-
+from firebase_push import send_push 
 import sqlite3
 
 app = Flask(__name__)
@@ -88,6 +88,43 @@ def delete(order_id):
     delete_reminder(order_id)
     return redirect("/reminders")
 
+@app.route("/save-token", methods=["POST"])
+def save_token():
+    data = request.json
+    token = data.get("token")
+
+    conn = sqlite3.connect("pharmacy.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fcm_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token TEXT
+        )
+    """)
+
+    cursor.execute("INSERT INTO fcm_tokens(token) VALUES (?)", (token,))
+    conn.commit()
+    conn.close()
+
+    return "", 204
+
+@app.route("/check-reminders")
+def check_and_send():
+
+    reminders = get_reminders()
+
+    for r in reminders:
+        if r["should_notify"]:
+
+            title = "RxRemind"
+            body = f'{r["name"]} • {r["medicine"]} • Refill Due • 📞 {r["phone"]}'
+
+            send_push(title, body)
+
+            reminder_already_sent(r["order_id"])
+
+    return "Checked", 200
 
 if __name__ == "__main__":
     app.run(debug=True)

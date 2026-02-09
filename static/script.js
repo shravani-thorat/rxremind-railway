@@ -50,3 +50,33 @@ setInterval(checkReminders, 60*60*1000);
 if("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/static/sw.js");
 }
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyC5xLeT44La7Cfz5w2l5NgF5MWVzh_gtyY",
+    authDomain: "rxremind-bb83e.firebaseapp.com",
+    projectId: "rxremind-bb83e",
+    messagingSenderId: "1098454881651",
+    appId: "1:1098454881651:web:fe4cf0689ab90bf10f6106"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+Notification.requestPermission().then((permission) => {
+  if (permission === "granted") {
+    getToken(messaging, {
+      vapidKey: "YOUR_PUBLIC_VAPID_KEY"
+    }).then((currentToken) => {
+      if (currentToken) {
+        fetch("/save-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: currentToken })
+        });
+      }
+    });
+  }
+});
