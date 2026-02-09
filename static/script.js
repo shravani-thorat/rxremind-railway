@@ -17,8 +17,8 @@ function addMedicine() {
     document.getElementById("medicines").appendChild(div);
 }
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC5xLeT44La7Cfz5w2l5NgF5MWVzh_gtyY",
@@ -27,6 +27,42 @@ const firebaseConfig = {
     messagingSenderId: "1098454881651",
     appId: "1:1098454881651:web:fe4cf0689ab90bf10f6106"
 };
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+Notification.requestPermission().then((permission) => {
+  if (permission === "granted") {
+
+    getToken(messaging, {
+      vapidKey: "BG0KjYPTQWnUHl5ozG4xntepXG_53yc0RCVYLvEN_9_OuWotIUBoUcgBY7mgnLeZEA8oDorgrrDTRrehvBknu2A"
+    }).then((currentToken) => {
+
+      if (currentToken) {
+
+        fetch("/save-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token: currentToken }),
+        });
+
+        console.log("Token sent to backend");
+
+      } else {
+        console.log("No registration token available.");
+      }
+
+    }).catch((err) => {
+      console.log("Error getting token:", err);
+    });
+
+  } else {
+    console.log("Notification permission denied.");
+  }
+});
+
 
 console.log("Step 1: Asking permission");
 
@@ -74,39 +110,3 @@ Notification.requestPermission().then(permission => {
 
     }
 });
-
-
-// const app = initializeApp(firebaseConfig);
-// const messaging = getMessaging(app);
-
-// Notification.requestPermission().then((permission) => {
-//   if (permission === "granted") {
-
-//     getToken(messaging, {
-//       vapidKey: "BG0KjYPTQWnUHl5ozG4xntepXG_53yc0RCVYLvEN_9_OuWotIUBoUcgBY7mgnLeZEA8oDorgrrDTRrehvBknu2A"
-//     }).then((currentToken) => {
-
-//       if (currentToken) {
-
-//         fetch("/save-token", {
-//           method: "POST",
-//           headers: {
-//             "Content-Type": "application/json",
-//           },
-//           body: JSON.stringify({ token: currentToken }),
-//         });
-
-//         console.log("Token sent to backend");
-
-//       } else {
-//         console.log("No registration token available.");
-//       }
-
-//     }).catch((err) => {
-//       console.log("Error getting token:", err);
-//     });
-
-//   } else {
-//     console.log("Notification permission denied.");
-//   }
-// });
