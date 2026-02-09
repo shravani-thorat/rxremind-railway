@@ -47,36 +47,39 @@ function checkReminders() {
 
 setInterval(checkReminders, 60*60*1000);
 
-if("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/static/sw.js");
-}
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .then((registration) => {
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+      const app = initializeApp(firebaseConfig);
+      const messaging = getMessaging(app);
 
-const firebaseConfig = {
-    apiKey: "AIzaSyC5xLeT44La7Cfz5w2l5NgF5MWVzh_gtyY",
-    authDomain: "rxremind-bb83e.firebaseapp.com",
-    projectId: "rxremind-bb83e",
-    messagingSenderId: "1098454881651",
-    appId: "1:1098454881651:web:fe4cf0689ab90bf10f6106"
-};
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+          getToken(messaging, {
+            vapidKey: "BG0KjYPTQWnUHl5ozG4xntepXG_53yc0RCVYLvEN_9_OuWotIUBoUcgBY7mgnLeZEA8oDorgrrDTRrehvBknu2A",
+            serviceWorkerRegistration: registration
+          }).then((currentToken) => {
 
-Notification.requestPermission().then((permission) => {
-  if (permission === "granted") {
-    getToken(messaging, {
-      vapidKey: "YOUR_PUBLIC_VAPID_KEY"
-    }).then((currentToken) => {
-      if (currentToken) {
-        fetch("/save-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: currentToken })
-        });
-      }
+            if (currentToken) {
+              console.log("Token:", currentToken);
+
+              fetch("/save-token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: currentToken })
+              });
+
+            } else {
+              console.log("No token received.");
+            }
+
+          }).catch((err) => {
+            console.error("Error getting token:", err);
+          });
+        }
+      });
+
     });
-  }
-});
+}
