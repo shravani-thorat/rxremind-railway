@@ -150,6 +150,10 @@ def check_tokens():
 
     return {"tokens": tokens}
 
+@app.route("/test-push")
+def test_push():
+    send_push("Test Notification", "If you see this, system works!")
+    return "Push sent!"
 
 
 if __name__ == "__main__":
