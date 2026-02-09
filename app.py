@@ -10,6 +10,7 @@ from database import (
     delete_reminder
 )
 from firebase_push import send_push 
+from flask import send_from_directory
 import sqlite3
 
 app = Flask(__name__)
@@ -125,6 +126,10 @@ def check_and_send():
             reminder_already_sent(r["order_id"])
 
     return "Checked", 200
+
+@app.route('/firebase-messaging-sw.js')
+def firebase_messaging_sw():
+    return send_from_directory('static', 'firebase-messaging-sw.js')
 
 if __name__ == "__main__":
     app.run(debug=True)
