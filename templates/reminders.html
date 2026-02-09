@@ -29,21 +29,17 @@
       </div>
 
       <div class="alarm-actions">
-
-        <!-- Toggle -->
         <label class="switch">
           <input type="checkbox"
-                 {% if r.is_active %}checked{% endif %}
-                 onchange="toggleReminder('{{ r.order_id }}')"
+              {% if r.is_active %}checked{% endif %}
+              onchange="toggleReminder('{{ r.order_id }}')">
           <span class="slider"></span>
         </label>
-
         <!-- Delete -->
-        <button onclick="deleteReminder('{{ r.order_id }}')"
-                class="delete-btn">
-            🗑
+        <button class="delete-btn"
+             onclick="deleteReminder('{{ r.order_id }}')">
+          🗑
         </button>
-
       </div>
 
     </div>
