@@ -1,3 +1,6 @@
+console.log("SCRIPT LOADED");
+alert("Script Loaded");
+
 function addMedicine() {
     const div = document.createElement("div");
     div.innerHTML = `
