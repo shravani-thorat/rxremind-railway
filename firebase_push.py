@@ -35,17 +35,25 @@ def send_push(title, body):
                 title=title,
                 body=body,
             ),
-            android=messaging.AndroidConfig(
-                priority="high",
-                notification=messaging.AndroidNotification(
-                    channel_id="medicine_reminder",
-                    priority="high",
-                    default_sound=True,
-                    sticky=True
-                )
-            ),
+            data={
+                 "title": title,
+                 "body": body,
+            },
             token=token,
         )
+
+
+        #     android=messaging.AndroidConfig(
+        #         priority="high",
+        #         notification=messaging.AndroidNotification(
+        #             channel_id="medicine_reminder",
+        #             priority="high",
+        #             default_sound=True,
+        #             sticky=True
+        #         )
+        #     ),
+        #     token=token,
+        # )
 
         try:
             messaging.send(message)

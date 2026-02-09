@@ -13,15 +13,13 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function(payload) {
 
-  const title = payload.data.title;
-  const body = payload.data.body;
+    console.log("Background message received:", payload);
 
-  self.registration.showNotification(title, {
-    body: body,
-    icon: "/static/icons/MediPingLogo.png",
-    requireInteraction: true,   
-    vibrate: [200, 100, 200],
-    tag: title   // prevents stacking duplicates
-  });
+    const title = payload.notification?.title || payload.data?.title;
+    const options = {
+        body: payload.notification?.body || payload.data?.body,
+        icon: "/static/icon.png"
+    };
 
+    self.registration.showNotification(title, options);
 });
