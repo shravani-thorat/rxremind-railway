@@ -1,6 +1,3 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-
 function addMedicine() {
     const div = document.createElement("div");
     div.innerHTML = `
@@ -17,6 +14,9 @@ function addMedicine() {
     document.getElementById("medicines").appendChild(div);
 }
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+
 const firebaseConfig = {
     apiKey: "AIzaSyC5xLeT44La7Cfz5w2l5NgF5MWVzh_gtyY",
     authDomain: "rxremind-bb83e.firebaseapp.com",
@@ -28,33 +28,34 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/firebase-messaging-sw.js")
-        .then((registration) => {
+Notification.requestPermission().then((permission) => {
+  if (permission === "granted") {
 
-            Notification.requestPermission().then((permission) => {
-                if (permission === "granted") {
+    getToken(messaging, {
+      vapidKey: "BG0KjYPTQWnUHl5ozG4xntepXG_53yc0RCVYLvEN_9_OuWotIUBoUcgBY7mgnLeZEA8oDorgrrDTRrehvBknu2A"
+    }).then((currentToken) => {
 
-                    getToken(messaging, {
-                        vapidKey: "BG0KjYPTQWnUHl5ozG4xntepXG_53yc0RCVYLvEN_9_OuWotIUBoUcgBY7mgnLeZEA8oDorgrrDTRrehvBknu2A",
-                        serviceWorkerRegistration: registration
-                    }).then((currentToken) => {
+      if (currentToken) {
 
-                        if (currentToken) {
-                            console.log("Token:", currentToken);
-
-                            fetch("/save-token", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ token: currentToken })
-                            });
-                        }
-
-                    }).catch((err) => {
-                        console.error("Error getting token:", err);
-                    });
-                }
-            });
-
+        fetch("/save-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token: currentToken }),
         });
-}
+
+        console.log("Token sent to backend");
+
+      } else {
+        console.log("No registration token available.");
+      }
+
+    }).catch((err) => {
+      console.log("Error getting token:", err);
+    });
+
+  } else {
+    console.log("Notification permission denied.");
+  }
+});
