@@ -12,8 +12,16 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function(payload) {
-  self.registration.showNotification(payload.notification.title, {
-    body: payload.notification.body,
-    icon: "/static/icons/MediPingLogo.png"
+
+  const title = payload.data.title;
+  const body = payload.data.body;
+
+  self.registration.showNotification(title, {
+    body: body,
+    icon: "/static/icons/MediPingLogo.png",
+    requireInteraction: true,   
+    vibrate: [200, 100, 200],
+    tag: title   // prevents stacking duplicates
   });
+
 });

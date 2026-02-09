@@ -84,31 +84,9 @@ document.addEventListener("DOMContentLoaded", function () {
   if (Notification.permission !== "granted") {
     Notification.requestPermission();
   }
-
-  fetch("/api/reminders")
-    .then(res => res.json())
-    .then(data => {
-
-      data.forEach(reminder => {
-
-        if (reminder.should_notify === true) {
-
-          if (Notification.permission === "granted") {
-            new Notification("📢 Medicine Reminder", {
-              body: reminder.name + " needs " + reminder.medicine
-            });
-          }
-
-          // Mark as reminded (avoid repeat today)
-          fetch("/mark_reminded/" + reminder.order_id);
-
-        }
-
-      });
-
-    });
-
+  fetch("/mark_reminded/" + reminder.order_id);
 });
+
 </script>
 
 </body>

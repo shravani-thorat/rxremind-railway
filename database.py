@@ -119,9 +119,14 @@ def get_reminders():
 
         should_notify = False
 
+        # Only notify if active
         if is_active == 1:
+
+            # If reminder date reached
             if reminder_date_obj <= today:
-                if last_reminded_on is None or last_reminded_on != today.isoformat():
+
+                # If never reminded today
+                if last_reminded_on != today.isoformat():
                     should_notify = True
 
         reminders.append({
@@ -136,6 +141,7 @@ def get_reminders():
         })
 
     return reminders
+
 
 # MARK REMINDER AS SENT
 def reminder_already_sent(order_id):
