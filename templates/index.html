@@ -52,14 +52,8 @@
     </div>
 </div>
 <!-- load JS -->
-<script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+<script type="module" src="/static/script.js"></script>
 
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/static/sw.js")
-    .then(() => console.log("Service Worker registered"));
-}
-</script>
 
 </body>
 </html>
