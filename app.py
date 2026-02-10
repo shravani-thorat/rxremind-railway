@@ -1,23 +1,25 @@
-from flask import Flask, jsonify, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash, jsonify
+from datetime import date
 from database import (
     init_db,
     add_customer,
     add_medicine,
-    get_reminders_for_today,
-    mark_reminded
+    get_all_reminders,
+    get_today_reminders,
+    mark_reminded,
+    toggle_reminder,
+    delete_reminder
 )
-from datetime import date
 
 app = Flask(__name__)
 app.secret_key = "rxremind-secret"
 
-# Initialize DB (Neon)
+# Initialize Neon DB tables
 init_db()
 
-# ==============================
-# ROUTES
-# ==============================
-
+# =========================
+# HOME PAGE
+# =========================
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -44,45 +46,60 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/reminders/<int:customer_id>")
-def view_reminders(customer_id):
-    today = date.today()
-    reminders = get_reminders_for_today(customer_id, today)
-
-    # Mark all shown reminders as reminded for today
-    for r in reminders:
-        mark_reminded(r['order_id'], today)
-
+# =========================
+# VIEW ALL REMINDERS
+# =========================
+@app.route("/reminders")
+def reminders():
+    reminders = get_all_reminders()
     return render_template("reminders.html", reminders=reminders)
 
 
-@app.route("/api/reminders/<int:customer_id>")
-def api_reminders(customer_id):
+# =========================
+# TODAY'S REFILL REMINDERS
+# =========================
+@app.route("/today")
+def today_reminders():
     today = date.today()
-    reminders = get_reminders_for_today(customer_id, today)
+    reminders = get_today_reminders(today)
 
-    # Mark reminders as reminded
+    # Mark shown reminders as reminded
     for r in reminders:
-        mark_reminded(r['order_id'], today)
+        mark_reminded(r["order_id"], today)
 
-    return jsonify(reminders)
+    return render_template("today.html", reminders=reminders)
 
 
+# =========================
+# TOGGLE ACTIVE / INACTIVE
+# =========================
 @app.route("/toggle/<int:order_id>")
 def toggle(order_id):
-    from database import turn_on_reminder, turn_off_reminder, is_reminder_active
-    if is_reminder_active(order_id):
-        turn_off_reminder(order_id)
-    else:
-        turn_on_reminder(order_id)
+    toggle_reminder(order_id)
     return "", 204
 
 
+# =========================
+# DELETE
+# =========================
 @app.route("/delete/<int:order_id>")
 def delete(order_id):
-    from database import delete_reminder
     delete_reminder(order_id)
     return redirect("/reminders")
+
+
+# =========================
+# API (optional future use)
+# # =========================
+# @app.route("/api/today")
+# def api_today():
+#     today = date.today()
+#     reminders = get_today_reminders(today)
+
+#     for r in reminders:
+#         mark_reminded(r["order_id"], today)
+
+#     return jsonify(reminders)
 
 
 if __name__ == "__main__":

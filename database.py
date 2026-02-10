@@ -1,25 +1,23 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import date
 
-# ==============================
-# DATABASE CONNECTION
-# ==============================
-DATABASE_URL = os.environ.get("psql 'postgresql://neondb_owner:npg_K3waOsTYWP6m@ep-ancient-darkness-a1glqwlu-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'")  # Set this in Railway
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 if not DATABASE_URL:
-    raise Exception("DATABASE_URL not found! Set it in Railway environment variables.")
+    raise Exception("DATABASE_URL not set in environment variables")
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
-# ==============================
-# INIT DB
-# ==============================
+
+# =========================
+# INITIALIZE TABLES
+# =========================
 def init_db():
     conn = get_conn()
     cur = conn.cursor()
-    # Customers
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS customers (
             customer_id SERIAL PRIMARY KEY,
@@ -27,26 +25,28 @@ def init_db():
             phone TEXT NOT NULL
         )
     """)
-    # Medicine Orders
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS medicine_orders (
             order_id SERIAL PRIMARY KEY,
-            customer_id INT REFERENCES customers(customer_id),
+            customer_id INTEGER REFERENCES customers(customer_id) ON DELETE CASCADE,
             medicine TEXT NOT NULL,
-            quantity INT NOT NULL,
-            days INT NOT NULL,
+            quantity INTEGER NOT NULL,
+            days INTEGER NOT NULL,
             start_date DATE DEFAULT CURRENT_DATE,
             last_reminded DATE,
             is_active BOOLEAN DEFAULT TRUE
         )
     """)
+
     conn.commit()
     cur.close()
     conn.close()
 
-# ==============================
-# CUSTOMER & MEDICINE
-# ==============================
+
+# =========================
+# ADD CUSTOMER
+# =========================
 def add_customer(name, phone):
     conn = get_conn()
     cur = conn.cursor()
@@ -60,95 +60,112 @@ def add_customer(name, phone):
     conn.close()
     return customer_id
 
+
+# =========================
+# ADD MEDICINE
+# =========================
 def add_medicine(customer_id, medicine, quantity, days):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO medicine_orders (customer_id, medicine, quantity, days)
-        VALUES (%s, %s, %s, %s)
-        """,
+
+    cur.execute("""
+        INSERT INTO medicine_orders
         (customer_id, medicine, quantity, days)
-    )
+        VALUES (%s, %s, %s, %s)
+    """, (customer_id, medicine, quantity, days))
+
     conn.commit()
     cur.close()
     conn.close()
 
-# ==============================
-# REMINDERS
-# ==============================
-def get_reminders_for_today(customer_id, today):
-    """Returns active reminders that should be notified today"""
+
+# =========================
+# GET ALL REMINDERS
+# =========================
+def get_all_reminders():
     conn = get_conn()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     cur.execute("""
-        SELECT * FROM medicine_orders
-        WHERE customer_id = %s
-          AND is_active = TRUE
-          AND (last_reminded IS NULL OR last_reminded < %s)
-          AND (start_date + (days - 1) >= %s)
-    """, (customer_id, today, today))
+        SELECT m.*, c.name, c.phone
+        FROM medicine_orders m
+        JOIN customers c ON m.customer_id = c.customer_id
+        ORDER BY m.order_id DESC
+    """)
+
+    data = cur.fetchall()
+    cur.close()
+    conn.close()
+    return data
+
+
+# =========================
+# TODAY REFILL LOGIC
+# =========================
+def get_today_reminders(today):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("""
+        SELECT m.*, c.name, c.phone
+        FROM medicine_orders m
+        JOIN customers c ON m.customer_id = c.customer_id
+        WHERE m.is_active = TRUE
+        AND (m.last_reminded IS NULL OR m.last_reminded < %s)
+        AND (m.start_date + (m.days - 1)) >= %s
+    """, (today, today))
 
     reminders = cur.fetchall()
     cur.close()
     conn.close()
     return reminders
 
+
+# =========================
+# MARK AS REMINDED
+# =========================
 def mark_reminded(order_id, today):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        "UPDATE medicine_orders SET last_reminded = %s WHERE order_id = %s",
-        (today, order_id)
-    )
+
+    cur.execute("""
+        UPDATE medicine_orders
+        SET last_reminded = %s
+        WHERE order_id = %s
+    """, (today, order_id))
+
     conn.commit()
     cur.close()
     conn.close()
 
-# ==============================
-# TOGGLE REMINDER
-# ==============================
-def turn_on_reminder(order_id):
+
+# =========================
+# TOGGLE ACTIVE
+# =========================
+def toggle_reminder(order_id):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        "UPDATE medicine_orders SET is_active = TRUE WHERE order_id = %s",
-        (order_id,)
-    )
+
+    cur.execute("""
+        UPDATE medicine_orders
+        SET is_active = NOT is_active
+        WHERE order_id = %s
+    """, (order_id,))
+
     conn.commit()
     cur.close()
     conn.close()
 
-def turn_off_reminder(order_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE medicine_orders SET is_active = FALSE WHERE order_id = %s",
-        (order_id,)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
 
-def is_reminder_active(order_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT is_active FROM medicine_orders WHERE order_id = %s",
-        (order_id,)
-    )
-    row = cur.fetchone()
-    conn.close()
-    return row[0] if row else False
-
-# ==============================
-# DELETE REMINDER
-# ==============================
+# =========================
+# DELETE
+# =========================
 def delete_reminder(order_id):
     conn = get_conn()
     cur = conn.cursor()
+
     cur.execute("DELETE FROM medicine_orders WHERE order_id = %s", (order_id,))
     conn.commit()
+
     cur.close()
     conn.close()
