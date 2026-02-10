@@ -35,7 +35,7 @@
               onchange="toggleReminder('{{ r.order_id }}')">
           <span class="slider"></span>
         </label>
-        <!-- Delete -->
+
         <button class="delete-btn"
              onclick="deleteReminder('{{ r.order_id }}')">
           🗑
@@ -52,41 +52,22 @@
 
 </div>
 
-
 <script>
-
 function toggleReminder(orderId) {
-  fetch("/toggle/" + orderId)
+  fetch("/toggle/" + orderId, { method: "POST" })
     .then(response => {
-      if (response.ok) {
-        location.reload();
-      }
+      if (response.ok) location.reload();
     });
 }
 
 function deleteReminder(orderId) {
   if (confirm("Delete this reminder?")) {
-    fetch("/delete/" + orderId)
+    fetch("/delete/" + orderId, { method: "POST" })
       .then(response => {
-        if (response.ok) {
-          location.reload();
-        }
+        if (response.ok) location.reload();
       });
   }
 }
-
-document.addEventListener("DOMContentLoaded", function () {
-
-  if (!("Notification" in window)) {
-    return;
-  }
-
-  if (Notification.permission !== "granted") {
-    Notification.requestPermission();
-  }
-  fetch("/mark_reminded/" + reminder.order_id);
-});
-
 </script>
 
 </body>

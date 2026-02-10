@@ -7,53 +7,102 @@
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#2b7cff">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
 </head>
 
 <body>
 <div class="app-container">
-    <!-- successful flash message -->
-     {% with messages = get_flashed_messages() %}
-     {% if messages %}
-     <div class="success-box">
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="success-box">
         {{ messages[0] }}
     </div>
     {% endif %}
     {% endwith %}
+
     <div class="container">
 
-        <h2 style= "text-align: center;"> Rx Reminder </h2>
-        
+        <h2 style="text-align: center;">Rx Reminder</h2>
+
         <form method="POST">
             <label>Customer Name</label><br>
             <input type="text" name="name" required><br><br>
+
             <label>Phone Number</label><br>
             <input type="text" name="phone" required><br><br>
+
             <hr>
+
             <div id="medicines">
                 <div>
                     <label>Medicine</label><br>
                     <input type="text" name="medicine[]" required><br>
+
                     <br><label>Quantity</label><br>
                     <input type="number" name="quantity[]" min="1" required><br>
+
                     <br><label>Days</label><br>
                     <input type="number" name="days[]" placeholder="e.g. 30" min="1" required><br>
                 </div>
             </div>
-            
+
             <br>
             <button type="button" onclick="addMedicine()">+ Add Medicine</button>
             <br><br>
-            
+
             <button type="submit">SAVE & REMIND</button>
         </form>
+
         <br>
         <a href="/reminders">View Reminders</a>
     </div>
 </div>
-<!-- load JS -->
-<script type="module" src="/static/script.js"></script>
 
+
+<!-- Add Medicine JS -->
+<script>
+function addMedicine() {
+    const div = document.createElement("div");
+    div.innerHTML = `
+        <br>
+        <label>Medicine</label>
+        <input type="text" name="medicine[]" required>
+
+        <label>Quantity</label>
+        <input type="number" name="quantity[]" min="1" required>
+
+        <label>Days</label>
+        <input type="number" name="days[]" placeholder="e.g. 30" min="1" required>
+    `;
+    document.getElementById("medicines").appendChild(div);
+}
+</script>
+
+
+<!-- Notification Logic -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  const reminderData = {{ reminders | tojson | safe }} || [];
+
+  if (!("Notification" in window)) return;
+
+  Notification.requestPermission().then(permission => {
+
+    if (permission !== "granted") return;
+
+    reminderData.forEach(function(r) {
+      if (r.should_notify === true) {
+        new Notification("RxRemind", {
+          body: r.name + " • " + r.medicine + " • Refill Due • 📞 " + r.phone
+        });
+      }
+    });
+
+  });
+
+});
+</script>
 
 </body>
 </html>
