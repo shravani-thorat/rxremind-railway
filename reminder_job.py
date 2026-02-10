@@ -1,5 +1,4 @@
 from database import get_reminders, reminder_already_sent
-from firebase_push import send_push
 from datetime import datetime
 
 def run_reminder_check():
@@ -11,8 +10,6 @@ def run_reminder_check():
 
             title = "RxRemind"
             body = f'{r["name"]} • {r["medicine"]} • Refill Due • 📞 {r["phone"]}'
-
-            send_push(title, body)
 
             reminder_already_sent(r["order_id"])
 

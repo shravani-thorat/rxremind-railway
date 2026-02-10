@@ -1,45 +1,18 @@
-from flask import Flask, jsonify, render_template, request, redirect, flash, send_from_directory
+from flask import Flask, jsonify, render_template, request, redirect, flash
 from database import (
     init_db,
     add_customer,
     add_medicine,
-    get_reminders,
-    reminder_already_sent,
-    turn_on_reminder,
-    turn_off_reminder,
-    delete_reminder
+    get_reminders_for_today,
+    mark_reminded
 )
-from firebase_push import send_push
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
-import sqlite3
-from database import DB_PATH
-
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = "rxremind-secret"
 
+# Initialize DB (Neon)
 init_db()
-
-# ==============================
-# SCHEDULER
-# ==============================
-
-def check_reminders_daily():
-    print("Running daily reminder check...")
-    reminders = get_reminders()
-
-    for r in reminders:
-        if r["should_notify"]:
-            title = "RxRemind"
-            body = f'{r["name"]} • {r["medicine"]} • Refill Due • 📞 {r["phone"]}'
-            send_push(title, body)
-            reminder_already_sent(r["order_id"])
-
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(check_reminders_daily, 'interval', minutes=5)
-scheduler.start()
 
 # ==============================
 # ROUTES
@@ -71,74 +44,45 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/reminders")
-def reminders():
-    data = get_reminders()
-    return render_template("reminders.html", reminders=data)
+@app.route("/reminders/<int:customer_id>")
+def view_reminders(customer_id):
+    today = date.today()
+    reminders = get_reminders_for_today(customer_id, today)
+
+    # Mark all shown reminders as reminded for today
+    for r in reminders:
+        mark_reminded(r['order_id'], today)
+
+    return render_template("reminders.html", reminders=reminders)
 
 
-@app.route("/api/reminders")
-def api_reminders():
-    return jsonify(get_reminders())
+@app.route("/api/reminders/<int:customer_id>")
+def api_reminders(customer_id):
+    today = date.today()
+    reminders = get_reminders_for_today(customer_id, today)
+
+    # Mark reminders as reminded
+    for r in reminders:
+        mark_reminded(r['order_id'], today)
+
+    return jsonify(reminders)
 
 
 @app.route("/toggle/<int:order_id>")
 def toggle(order_id):
-    conn = sqlite3.connect("pharmacy.db")
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT is_active FROM medicine_orders WHERE order_id = ?",
-        (order_id,)
-    )
-    row = cursor.fetchone()
-    conn.close()
-
-    if row and row[0] == 1:
+    from database import turn_on_reminder, turn_off_reminder, is_reminder_active
+    if is_reminder_active(order_id):
         turn_off_reminder(order_id)
     else:
         turn_on_reminder(order_id)
-
     return "", 204
 
 
 @app.route("/delete/<int:order_id>")
 def delete(order_id):
+    from database import delete_reminder
     delete_reminder(order_id)
     return redirect("/reminders")
-
-
-@app.route("/save-token", methods=["POST"])
-def save_token():
-    data = request.json
-    token = data.get("token")
-
-    conn = sqlite3.connect("pharmacy.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS fcm_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            token TEXT
-        )
-    """)
-
-    cursor.execute("INSERT INTO fcm_tokens(token) VALUES (?)", (token,))
-    conn.commit()
-    conn.close()
-
-    return "", 204
-
-
-@app.route('/firebase-messaging-sw.js')
-def firebase_messaging_sw():
-    return send_from_directory('static', 'firebase-messaging-sw.js')
-
-
-# @app.route("/manual-check")
-# def manual_check():
-#     check_reminders_daily()
-#     return "Manual check done", 200
 
 
 if __name__ == "__main__":

@@ -1,202 +1,154 @@
 import os
-import sqlite3
-from datetime import datetime, timedelta
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from datetime import date
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "pharmacy.db")
+# ==============================
+# DATABASE CONNECTION
+# ==============================
+DATABASE_URL = os.environ.get("psql 'postgresql://neondb_owner:npg_K3waOsTYWP6m@ep-ancient-darkness-a1glqwlu-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'")  # Set this in Railway
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL not found! Set it in Railway environment variables.")
 
+def get_conn():
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
+
+# ==============================
+# INIT DB
+# ==============================
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS customers (
-        customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT NOT NULL
-    )
+    conn = get_conn()
+    cur = conn.cursor()
+    # Customers
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS customers (
+            customer_id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL
+        )
     """)
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS medicine_orders (
-        order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
-        medicine_name TEXT NOT NULL,
-        quantity INTEGER,
-        days INTEGER,
-        start_date TEXT,
-        end_date TEXT,
-        reminder_date TEXT,
-        is_active INTEGER DEFAULT 1,
-        last_reminded_on TEXT,
-        FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-    )
+    # Medicine Orders
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS medicine_orders (
+            order_id SERIAL PRIMARY KEY,
+            customer_id INT REFERENCES customers(customer_id),
+            medicine TEXT NOT NULL,
+            quantity INT NOT NULL,
+            days INT NOT NULL,
+            start_date DATE DEFAULT CURRENT_DATE,
+            last_reminded DATE,
+            is_active BOOLEAN DEFAULT TRUE
+        )
     """)
-
     conn.commit()
+    cur.close()
     conn.close()
 
-def calculate_dates(days):
-    start_date = datetime.today().date()
-    end_date = start_date + timedelta(days=days)
-    reminder_date = end_date - timedelta(days=2)
-    return start_date, end_date, reminder_date
-
-# ADD CUSTOMER
+# ==============================
+# CUSTOMER & MEDICINE
+# ==============================
 def add_customer(name, phone):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT INTO customers (name, phone) VALUES (?, ?)",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO customers (name, phone) VALUES (%s, %s) RETURNING customer_id",
         (name, phone)
     )
-
+    customer_id = cur.fetchone()[0]
     conn.commit()
-    customer_id = cursor.lastrowid
+    cur.close()
     conn.close()
-
     return customer_id
 
-# ADD MEDICINE
-def add_medicine(customer_id, medicine_name, quantity, days):
-    start_date, end_date, reminder_date = calculate_dates(days)
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO medicine_orders
-        (customer_id, medicine_name, quantity, days,
-         start_date, end_date, reminder_date,
-         is_active, last_reminded_on)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, NULL)
-    """, (
-        customer_id,
-        medicine_name,
-        quantity,
-        days,
-        start_date.isoformat(),
-        end_date.isoformat(),
-        reminder_date.isoformat()
-    ))
-
+def add_medicine(customer_id, medicine, quantity, days):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO medicine_orders (customer_id, medicine, quantity, days)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (customer_id, medicine, quantity, days)
+    )
     conn.commit()
+    cur.close()
     conn.close()
 
-# GET REMINDERS 
-def get_reminders():
-    today = datetime.today().date()
+# ==============================
+# REMINDERS
+# ==============================
+def get_reminders_for_today(customer_id, today):
+    """Returns active reminders that should be notified today"""
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    cur.execute("""
+        SELECT * FROM medicine_orders
+        WHERE customer_id = %s
+          AND is_active = TRUE
+          AND (last_reminded IS NULL OR last_reminded < %s)
+          AND (start_date + (days - 1) >= %s)
+    """, (customer_id, today, today))
 
-    cursor.execute("""
-        SELECT
-            medicine_orders.order_id,
-            customers.name,
-            customers.phone,
-            medicine_orders.medicine_name,
-            medicine_orders.quantity,
-            medicine_orders.days,
-            medicine_orders.reminder_date,
-            medicine_orders.is_active,
-            medicine_orders.last_reminded_on
-        FROM medicine_orders
-        JOIN customers
-        ON customers.customer_id = medicine_orders.customer_id
-    """)
-
-    rows = cursor.fetchall()
+    reminders = cur.fetchall()
+    cur.close()
     conn.close()
-
-    reminders = []
-
-    for row in rows:
-        order_id, name, phone, med, qty, days, reminder_date, is_active, last_reminded_on = row
-
-        reminder_date_obj = datetime.fromisoformat(reminder_date).date()
-
-        should_notify = False
-
-        # Only notify if active
-        if is_active == 1:
-
-            # If reminder date reached
-            if reminder_date_obj <= today:
-
-                # If never reminded today
-                if last_reminded_on != today.isoformat():
-                    should_notify = True
-
-        reminders.append({
-            "order_id": order_id,
-            "name": name,
-            "phone": phone,
-            "medicine": med,
-            "quantity": qty,
-            "reminder_date": reminder_date,
-            "is_active": is_active,
-            "should_notify": should_notify
-        })
-
     return reminders
 
-
-# MARK REMINDER AS SENT
-def reminder_already_sent(order_id):
-    today = datetime.today().date().isoformat()
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE medicine_orders
-        SET last_reminded_on = ?
-        WHERE order_id = ?
-    """, (today, order_id))
-
+def mark_reminded(order_id, today):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE medicine_orders SET last_reminded = %s WHERE order_id = %s",
+        (today, order_id)
+    )
     conn.commit()
+    cur.close()
     conn.close()
 
+# ==============================
 # TOGGLE REMINDER
+# ==============================
 def turn_on_reminder(order_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE medicine_orders
-        SET is_active = 1,
-            last_reminded_on = NULL
-        WHERE order_id = ?
-    """, (order_id,))
-
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE medicine_orders SET is_active = TRUE WHERE order_id = %s",
+        (order_id,)
+    )
     conn.commit()
+    cur.close()
     conn.close()
-
 
 def turn_off_reminder(order_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        UPDATE medicine_orders
-        SET is_active = 0
-        WHERE order_id = ?
-    """, (order_id,))
-
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE medicine_orders SET is_active = FALSE WHERE order_id = %s",
+        (order_id,)
+    )
     conn.commit()
+    cur.close()
     conn.close()
 
+def is_reminder_active(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT is_active FROM medicine_orders WHERE order_id = %s",
+        (order_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else False
+
+# ==============================
 # DELETE REMINDER
+# ==============================
 def delete_reminder(order_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        DELETE FROM medicine_orders
-        WHERE order_id = ?
-    """, (order_id,))
-
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM medicine_orders WHERE order_id = %s", (order_id,))
     conn.commit()
+    cur.close()
     conn.close()
