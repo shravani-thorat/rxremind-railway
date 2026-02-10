@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash, jsonify
 from datetime import date
 
 from database import (
@@ -88,6 +88,11 @@ def delete(order_id):
     delete_reminder(order_id)
     return "", 204
 
+@app.route("/debug-db")
+def debug_db():
+    from database import get_all_reminders
+    data = get_all_reminders()
+    return jsonify(data)
 
 if __name__ == "__main__":
     app.run(debug=True)
