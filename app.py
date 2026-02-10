@@ -38,7 +38,7 @@ def check_reminders_daily():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(check_reminders_daily, 'cron', hour=9, minute=0)
+scheduler.add_job(check_reminders_daily, 'interval', minutes=5)
 scheduler.start()
 
 # ==============================
@@ -135,25 +135,10 @@ def firebase_messaging_sw():
     return send_from_directory('static', 'firebase-messaging-sw.js')
 
 
-@app.route("/manual-check")
-def manual_check():
-    check_reminders_daily()
-    return "Manual check done", 200
-
-@app.route("/check-tokens")
-def check_tokens():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT token FROM fcm_tokens")
-    tokens = cursor.fetchall()
-    conn.close()
-
-    return {"tokens": tokens}
-
-@app.route("/test-push")
-def test_push():
-    send_push("Test Notification", "If you see this, system works!")
-    return "Push sent!"
+# @app.route("/manual-check")
+# def manual_check():
+#     check_reminders_daily()
+#     return "Manual check done", 200
 
 
 if __name__ == "__main__":
