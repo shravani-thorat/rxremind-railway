@@ -83,7 +83,7 @@ function addMedicine() {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-  const reminderData = {{ reminders | tojson | safe }} || [];
+  const reminderData = {{ reminders | tojson }};
 
   if (!("Notification" in window)) return;
 
@@ -92,11 +92,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (permission !== "granted") return;
 
     reminderData.forEach(function(r) {
-      if (r.should_notify === true) {
         new Notification("RxRemind", {
           body: r.name + " • " + r.medicine + " • Refill Due • 📞 " + r.phone
         });
-      }
     });
 
   });

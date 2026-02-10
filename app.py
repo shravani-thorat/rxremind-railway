@@ -1,12 +1,14 @@
-from flask import Flask, jsonify, render_template, request, redirect, flash
+from flask import Flask, render_template, request, redirect, flash
+from datetime import date
+
 from database import (
     init_db,
     add_customer,
     add_medicine,
     get_all_reminders,
-    reminder_already_sent,
-    turn_on_reminder,
-    turn_off_reminder,
+    get_today_reminders,
+    mark_reminded,
+    toggle_reminder,
     delete_reminder
 )
 
@@ -19,10 +21,12 @@ init_db()
 # ==============================
 # HOME PAGE
 # ==============================
-
 @app.route("/", methods=["GET", "POST"])
 def index():
 
+    # --------------------------
+    # SAVE FORM DATA
+    # --------------------------
     if request.method == "POST":
         name = request.form["name"]
         phone = request.form["phone"]
@@ -44,30 +48,23 @@ def index():
         flash("✅ Reminder saved successfully!")
         return redirect("/")
 
-    raw_reminders = get_all_reminders()
+    # --------------------------
+    # NOTIFICATION LOGIC
+    # --------------------------
+    today = date.today()
 
-    # Prepare JSON-safe reminders
-    notify_list = []
+    reminders = get_today_reminders(today)
 
-    for r in raw_reminders:
-        notify_list.append({
-            "order_id": r["order_id"],
-            "name": r["name"],
-            "medicine": r["medicine"],
-            "phone": r["phone"],
-            "should_notify": bool(r["should_notify"])
-        })
+    # Mark them as reminded immediately
+    for r in reminders:
+        mark_reminded(r["order_id"], today)
 
-        # Mark as reminded if due
-        if r["should_notify"]:
-            reminder_already_sent(r["order_id"])
+    return render_template("index.html", reminders=reminders)
 
-    return render_template("index.html", reminders=notify_list)
 
 # ==============================
-# VIEW REMINDERS PAGE
+# VIEW ALL REMINDERS
 # ==============================
-
 @app.route("/reminders")
 def reminders():
     data = get_all_reminders()
@@ -75,29 +72,17 @@ def reminders():
 
 
 # ==============================
-# TOGGLE REMINDER
+# TOGGLE ACTIVE / INACTIVE
 # ==============================
-
 @app.route("/toggle/<int:order_id>", methods=["POST"])
 def toggle(order_id):
-
-    reminders = get_all_reminders()
-
-    for r in reminders:
-        if r["order_id"] == order_id:
-            if r["is_active"]:
-                turn_off_reminder(order_id)
-            else:
-                turn_on_reminder(order_id)
-            break
-
+    toggle_reminder(order_id)
     return "", 204
 
 
 # ==============================
-# DELETE REMINDER
+# DELETE
 # ==============================
-
 @app.route("/delete/<int:order_id>", methods=["POST"])
 def delete(order_id):
     delete_reminder(order_id)
