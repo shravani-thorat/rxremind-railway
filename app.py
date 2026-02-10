@@ -3,7 +3,7 @@ from database import (
     init_db,
     add_customer,
     add_medicine,
-    get_reminders,
+    get_all_reminders,
     reminder_already_sent,
     turn_on_reminder,
     turn_off_reminder,
@@ -44,7 +44,7 @@ def index():
         flash("✅ Reminder saved successfully!")
         return redirect("/")
 
-    raw_reminders = get_reminders()
+    raw_reminders = get_all_reminders()
 
     # Prepare JSON-safe reminders
     notify_list = []
@@ -70,7 +70,7 @@ def index():
 
 @app.route("/reminders")
 def reminders():
-    data = get_reminders()
+    data = get_all_reminders()
     return render_template("reminder.html", reminders=data)
 
 
@@ -81,7 +81,7 @@ def reminders():
 @app.route("/toggle/<int:order_id>", methods=["POST"])
 def toggle(order_id):
 
-    reminders = get_reminders()
+    reminders = get_all_reminders()
 
     for r in reminders:
         if r["order_id"] == order_id:
