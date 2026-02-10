@@ -68,7 +68,7 @@ def index():
 @app.route("/reminders")
 def reminders():
     data = get_all_reminders()
-    return render_template("reminder.html", reminders=data)
+    return render_template("reminders.html", reminders=data)
 
 
 # ==============================
