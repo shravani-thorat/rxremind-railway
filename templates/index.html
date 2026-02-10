@@ -83,24 +83,37 @@ function addMedicine() {
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-  const reminderData = {{ reminders | tojson }};
+    const reminderData = JSON.parse('{{ reminders | tojson | safe }}');
 
-  if (!("Notification" in window)) return;
+    console.log("Reminders:", reminderData);
 
-  Notification.requestPermission().then(permission => {
+    if (!("Notification" in window)) {
+        console.log("Notifications not supported");
+        return;
+    }
 
-    if (permission !== "granted") return;
+    if (!reminderData || reminderData.length === 0) {
+        console.log("No reminders today");
+        return;
+    }
 
-    reminderData.forEach(function(r) {
-        new Notification("RxRemind", {
-          body: r.name + " • " + r.medicine + " • Refill Due • 📞 " + r.phone
+    Notification.requestPermission().then(function(permission) {
+
+        if (permission !== "granted") {
+            console.log("Permission denied");
+            return;
+        }
+
+        reminderData.forEach(function(r) {
+            new Notification("💊 RxRemind - Refill Due", {
+                body: r.name + " needs " + r.medicine + " | 📞 " + r.phone
+            });
         });
+
     });
 
-  });
-
 });
-</script>
 
+</script>
 </body>
 </html>
