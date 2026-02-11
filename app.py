@@ -47,6 +47,7 @@ def index():
 
         flash("✅ Reminder saved successfully!")
         return redirect("/")
+    return render_template("index.html")
 
 
 # ==============================
