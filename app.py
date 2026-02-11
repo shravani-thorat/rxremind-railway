@@ -63,11 +63,7 @@ def reminders():
     for r in today_reminders:
         mark_reminded(r["order_id"], today)
 
-    return render_template(
-        "reminders.html",
-        reminders=all_reminders,
-        today_reminders=today_reminders
-    )
+    return render_template("reminders.html",reminders=all_reminders,today_reminders=today_reminders)
 
 
 # ==============================
