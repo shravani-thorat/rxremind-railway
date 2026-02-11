@@ -70,5 +70,37 @@ function deleteReminder(orderId) {
 }
 </script>
 
+<script id="reminder-data" type="application/json">
+  {{ reminders | tojson }}
+</script>
+
+<!-- Notification Logic -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const dataElement = document.getElementById("reminder-data");
+  const reminderData = JSON.parse(dataElement.textContent);
+
+  if (!("Notification" in window)) {
+    console.log("Notification not supported");
+    return;
+  }
+  if (!reminderData || reminderData.length === 0) {
+    console.log("No reminders today");
+    return;
+  }
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+  if (Notification.permission === "granted") {
+    reminderData.forEach(function(r) {
+            new Notification("💊 RxRemind - Refill Due", {
+                body: r.name + " needs " + r.medicine + " | 📞 " + r.phone
+            });
+    });
+  }
+
+});
+</script>
+
 </body>
 </html>

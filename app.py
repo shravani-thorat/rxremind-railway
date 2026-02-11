@@ -48,27 +48,26 @@ def index():
         flash("✅ Reminder saved successfully!")
         return redirect("/")
 
-    # --------------------------
-    # NOTIFICATION LOGIC
-    # --------------------------
-    today = date.today()
-
-    reminders = get_today_reminders(today)
-
-    # Mark them as reminded immediately
-    for r in reminders:
-        mark_reminded(r["order_id"], today)
-
-    return render_template("index.html", reminders=reminders)
-
 
 # ==============================
 # VIEW ALL REMINDERS
 # ==============================
 @app.route("/reminders")
 def reminders():
-    data = get_all_reminders()
-    return render_template("reminders.html", reminders=data)
+    today = date.today()
+
+    all_reminders = get_all_reminders()
+    today_reminders = get_today_reminders(today)
+
+    # Mark them as reminded immediately
+    for r in today_reminders:
+        mark_reminded(r["order_id"], today)
+
+    return render_template(
+        "reminders.html",
+        reminders=all_reminders,
+        today_reminders=today_reminders
+    )
 
 
 # ==============================
